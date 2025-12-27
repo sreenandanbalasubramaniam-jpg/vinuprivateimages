@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/app/globals.css"],"sourcesContent":["\n@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n:root {\n  --foreground-rgb: 255, 255, 255;\n  --background-start-rgb: 0, 0, 0;\n  --background-end-rgb: 0, 0, 0;\n}\n\nbody {\n  color: rgb(var(--foreground-rgb));\n  background: rgb(var(--background-start-rgb));\n  margin: 0;\n  overflow: hidden;\n}\n\n@layer utilities {\n  .animate-shimmer {\n    animation: shimmer 2s infinite linear;\n  }\n}\n\n@keyframes shimmer {\n  0% { transform: translateX(-100%); }\n  100% { transform: translateX(100%); }\n}\n\n@keyframes shake {\n  0%, 100% { transform: translateX(0); }\n  25% { transform: translateX(-8px); }\n  75% { transform: translateX(8px); }\n}\n\n.animate-shake {\n  animation: shake 0.4s ease-in-out;\n}\n"],"names":[],"mappings":"AACA;;AACA;;AACA;;AAEA;;;;;;AAMA;;;;;;;AAOA;EACE;;;;;AAKF;;;;;;;;;;AAKA;;;;;;;;;;;;;;AAMA"}}]
+}
