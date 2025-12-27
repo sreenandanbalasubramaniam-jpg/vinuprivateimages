@@ -1,0 +1,7 @@
+{
+  "name": "Copy of GeoConsent Project",
+  "description": "A sophisticated location-sharing application with a glassmorphism design, providing a seamless consent process and AI-powered geographical insights.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
