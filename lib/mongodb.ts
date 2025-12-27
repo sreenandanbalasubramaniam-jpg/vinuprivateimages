@@ -20,6 +20,7 @@ if (!cached) {
 
 async function dbConnect() {
   if (cached.conn) {
+    console.log('✅ Using cached MongoDB connection');
     return cached.conn;
   }
 
@@ -28,7 +29,12 @@ async function dbConnect() {
       bufferCommands: false,
     };
 
+    console.log('🔄 Connecting to MongoDB...');
+    console.log('📍 URI:', MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')); // Hide password
+    
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      console.log('✅ MongoDB connected successfully!');
+      console.log('📊 Database:', mongoose.connection.db.databaseName);
       return mongoose;
     });
   }
@@ -36,6 +42,7 @@ async function dbConnect() {
   try {
     cached.conn = await cached.promise;
   } catch (e) {
+    console.error('❌ MongoDB connection failed:', e);
     cached.promise = null;
     throw e;
   }
